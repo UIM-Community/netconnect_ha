@@ -1,13 +1,18 @@
 # netconnect_ha
 CA UIM Net_connect High availability
 
-This probe has been created to do netconnect ha (switch of all profiles when a HA occur on some hubs). This probe has not been created to be HA supported (so this is a unique probe).
+This probe has been created to do the same job as HA probe but for net_connect. You put the probe on one hub and you configure `nim_addr` in the configuration file (the distant hub you need to synchronise).
 
-> This probe is an alpha, she has been tested only in one pre-production context.
+You can put the probe on both hub to create bi-directionnal HA.
 
-Feel free to contribute if you want to update / upgrade the probe 
+The probe only support HA for ping profiles (see roadmap for group etc..).
 
-# Roadmap 
+# Requirement 
 
-- Better implementation of perluim framework (reduce useless code) 
-- Better storage_ha (maybe with JSON.pm) and add a remote possibility for this file (idea for HA Support)
+This probe require [perluim 4.2](https://github.com/fraxken/perluim) or higher.
+
+> **Warning** Perluim 4.2 is under development. 
+
+# Roadmap v1.1
+
+- Clone group.
