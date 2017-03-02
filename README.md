@@ -1,4 +1,4 @@
-# netconnect_ha
+# Netconnect_ha
 
 CA UIM Net_connect High availability
 
@@ -8,6 +8,9 @@ This probe work like the HA probe. It was created with the objective of managing
 
 You have to be vigilant if you mix this probe with any kind of net_connect provisionning mechanism (can generate collision between them). I'm working on a way to manage this (AKA daemon probe with callback).
 
+# Documentation
+
+Find the documentation [Here](https://github.com/fraxken/netconnect_ha/wiki)
 
 # Requirement 
 
