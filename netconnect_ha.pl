@@ -172,11 +172,30 @@ if($Daemon_mode eq "yes") {
 
     sub timeout {
         $Logger->log(5,"---------------------------------");
-        if($Main_executed == 0) {
-            main();
-            $|=1;
-            sleep($Daemon_timeout);
+        $localMap = new perluim::filemap("$SyncPath/state.cfg");
+
+        if($localMap->has("timecount")) {
+            my $Params = $localMap->getParams("timecount"); 
+            $Logger->log(3,"Timeout counter interval => $Params->{count} / $Daemon_timeout");
+            if($Params->{count} == $Daemon_timeout) {
+                main();
+                $localMap->set("timecount",{
+                    count => 0
+                });
+            }
+            else {
+                my $nCount = $Params->{count} + 1;
+                $localMap->set("timecount",{
+                    count => $nCount
+                });
+            }
         }
+        else {
+            $localMap->set("timecount",{
+                count => 0
+            });
+        }
+        $localMap->writeToDisk();
     }
 
     sub restart {
