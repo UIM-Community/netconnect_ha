@@ -22,6 +22,7 @@ my ($Logger,$UIM,$Execution_Date);
 my ($Domain,$OutputCache,$OutputDirectory,$Login,$Password,$Daemon_mode,$Netconnect_online,$SyncPath,$Nim_ADDR,$localMap,$LogDirectory,$Daemon_timeout);
 my $Main_executed = 0; 
 
+$SIG{__DIE__} = \&dieHandler;
 # Create log file
 $Logger = new perluim::logger({
     file => "$probeName.log",
@@ -50,7 +51,7 @@ sub readConfiguration {
     $Password            = $CFG->{"setup"}->{"nim_password"};
 
     $Daemon_mode         = $CFG->{"configuration"}->{"daemon_mode"} || "yes";
-    $Daemon_timeout      = $CFG->{"configuration"}->{"daemon_timeout"} || 35;
+    $Daemon_timeout      = $CFG->{"configuration"}->{"daemon_timeout"} || 120;
     $Netconnect_online   = $CFG->{"configuration"}->{"netconnect_online"} || "no";
     $SyncPath            = $CFG->{"configuration"}->{"sync_path"} || "storage";
     $Nim_ADDR            = $CFG->{"configuration"}->{"nim_addr"};
@@ -59,8 +60,6 @@ sub readConfiguration {
     $LogDirectory = "$OutputDirectory/$Execution_Date";
     perluim::utils::createDirectory($LogDirectory);
     perluim::utils::createDirectory("$SyncPath");
-
-    $localMap = new perluim::filemap("$SyncPath/state.cfg");
 }
 
 # Get remote robot!
@@ -75,6 +74,8 @@ sub getRemote {
 
 # Main method!
 sub main {
+
+    $localMap = new perluim::filemap("$SyncPath/state.cfg");
 
     # Get local robot!
     my ($RC,$LocalRobot,$RemoteRobot);
@@ -145,10 +146,21 @@ sub main {
 
 }
 
+sub dieHandler {
+    my ($err) = @_;
+    $localMap->writeToDisk();
+    $Logger->finalTime($time);
+	$Logger->log(0,"Program is exiting abnormally : $err");
+    $| = 1; # Buffer I/O fix
+    sleep(2);
+    $Logger->copyTo("output/$Execution_Date");
+}
+
 if($Daemon_mode eq "yes") {
 
     sub isHA {
         my ($hMsg) = @_;
+        $Logger->log(5,"---------------------------------");
         my $HA_Value = $localMap->has('HA');
         $Logger->log(3,"isHA callback triggered with HA Value => $HA_Value");
         my $PDS = pdsCreate();
@@ -159,6 +171,7 @@ if($Daemon_mode eq "yes") {
     sub execute {
         my ($hMsg) = @_;
         my $PDS = pdsCreate();
+        $Logger->log(5,"---------------------------------");
 
         if($Main_executed) {
             pdsPut_PCH ($PDS,"error","Main is already executed!");
@@ -177,26 +190,28 @@ if($Daemon_mode eq "yes") {
         if($localMap->has("timecount")) {
             my $Params = $localMap->getParams("timecount"); 
             $Logger->log(3,"Timeout counter interval => $Params->{count} / $Daemon_timeout");
-            if($Params->{count} == $Daemon_timeout) {
-                main();
+            if($Params->{count} >= $Daemon_timeout) {
                 $localMap->set("timecount",{
                     count => 0
                 });
+                $localMap->writeToDisk();
+                main();
             }
             else {
                 my $nCount = $Params->{count} + 1;
                 $localMap->set("timecount",{
                     count => $nCount
                 });
+                $localMap->writeToDisk();
             }
         }
         else {
             $localMap->set("timecount",{
                 count => 0
             });
-	    main();
+            $localMap->writeToDisk();
+            main();
         }
-        $localMap->writeToDisk();
     }
 
     sub restart {
