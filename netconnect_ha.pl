@@ -75,6 +75,10 @@ sub getRemote {
 # Main method!
 sub main {
 
+    {
+        my $MainExecute = perluim::utils::getDate();
+        $Logger->copy("output/$MainExecute");
+    }
     $localMap = new perluim::filemap("$SyncPath/state.cfg");
 
     # Get local robot!
@@ -153,7 +157,10 @@ sub dieHandler {
 	$Logger->log(0,"Program is exiting abnormally : $err");
     $| = 1; # Buffer I/O fix
     sleep(2);
-    $Logger->copyTo("output/$Execution_Date");
+    {
+        my $MainExecute = perluim::utils::getDate();
+        $Logger->copy("output/$MainExecute");
+    }
 }
 
 if($Daemon_mode eq "yes") {
