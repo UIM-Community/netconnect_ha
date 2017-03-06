@@ -194,6 +194,7 @@ if($Daemon_mode eq "yes") {
             $localMap->set("timecount",{
                 count => 0
             });
+	    main();
         }
         $localMap->writeToDisk();
     }
