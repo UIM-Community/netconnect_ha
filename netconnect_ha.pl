@@ -50,7 +50,7 @@ sub readConfiguration {
     $Password            = $CFG->{"setup"}->{"nim_password"};
 
     $Daemon_mode         = $CFG->{"configuration"}->{"daemon_mode"} || "yes";
-    $Daemon_timeout      = $CFG->{"configuration"}->{"daemon_timeout"} || 120;
+    $Daemon_timeout      = $CFG->{"configuration"}->{"daemon_timeout"} || 35;
     $Netconnect_online   = $CFG->{"configuration"}->{"netconnect_online"} || "no";
     $SyncPath            = $CFG->{"configuration"}->{"sync_path"} || "storage";
     $Nim_ADDR            = $CFG->{"configuration"}->{"nim_addr"};
