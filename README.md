@@ -20,8 +20,10 @@ This probe require [perluim 4.2](https://github.com/fraxken/perluim) or higher.
 
 # Roadmap v1.1 (LTS)
 
-- Clone group.
-- Avoid collision when we merge cfg between them.
-- Create two distincts version ( timed probe & daemon probe ).
-- First API documentation for netconnect_ha core class.
-- Publish with perluim R4.2 official stable LTS release.
+- [x] Clone group.
+- [x] Clone profiles services.
+- [x] Avoid collision when we merge cfg between them.
+- [x] Create two distincts version ( timed probe & daemon probe ).
+- [x] First API documentation for netconnect_ha core class.
+
+> **Wait for perluim 4.2 release**
