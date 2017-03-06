@@ -65,11 +65,12 @@ sub getCFG {
 sub hydrateCFG {
     my ($self,$up_file,$down_file) = @_;
 
-    $self->{logger}->log(3,"Transfering profiles!");
+    $self->{logger}->log(3,"Transfering net_connect CFG!");
     my $up_cfg      = cfgOpen("$self->{storagePath}/$up_file.cfg",0);
     my $down_cfg    = Nimbus::CFG->new("$self->{storagePath}/${down_file}.cfg");
 
     # Create collision hash
+    $self->{logger}->log(3,"Transfer: Create collision hash!");
     my %AC_Profiles = ();
     my %AC_Groups = ();
 
@@ -84,10 +85,12 @@ sub hydrateCFG {
     }
 
     # Check profiles
-    foreach my $profileName ( keys $down_cfg->{"profiles"} ) {
+    $self->{logger}->log(3,"Transfer: Profiles...");
+    foreach my $profileName ( $down_cfg->getKeys($down_cfg->{"profiles"}) ) {
         next if exists $AC_Profiles{$profileName};
         my $path = "/profiles/$profileName/";
         $self->createSection($up_cfg,$path);
+        $self->{logger}->log(3,"$profileName");
         
         foreach my $sectionName ( keys $down_cfg->{"profiles"}->{"$profileName"} ) {
             my $keyValue = $down_cfg->{"profiles"}->{"$profileName"}->{"$sectionName"};
@@ -96,10 +99,10 @@ sub hydrateCFG {
 
         # When services is defined ! 
         if( defined $down_cfg->{"profiles"}->{"$profileName"}->{"services"} ) {
-            foreach my $serviceName ( keys $down_cfg->{"profiles"}->{"$profileName"}->{"services"} ) {
+            foreach my $serviceName ( $down_cfg->getKeys($down_cfg->{"profiles"}->{"$profileName"}->{"services"}) ) {
                 $self->createSection($up_cfg,"/profiles/$profileName/services/$serviceName/");
 
-                foreach my $serviceKey ( keys $down_cfg->{"profiles"}->{"$profileName"}->{"services"}->{"$serviceName"} ) {
+                foreach my $serviceKey ( $down_cfg->getKeys($down_cfg->{"profiles"}->{"$profileName"}->{"services"}->{"$serviceName"}) ) {
                     my $keyValue = $down_cfg->{"profiles"}->{"$profileName"}->{"services"}->{"$serviceName"}->{"$serviceKey"};
                     cfgKeyWrite($up_cfg,"/profiles/$profileName/services/$serviceName/","$serviceKey","$keyValue");
                 }
@@ -107,11 +110,13 @@ sub hydrateCFG {
         }
     }
 
-    foreach my $groupName ( keys $down_cfg->{"groups"} ) {
+    $self->{logger}->log(3,"Transfer: Groups...");
+    foreach my $groupName ( $down_cfg->getKeys($down_cfg->{"groups"}) ) {
         next if exists $AC_Groups{$groupName};
         cfgKeyWrite($up_cfg,"/groups","$groupName","");
     }
 
+    $self->{logger}->log(3,"Transfer: Sync cfg...");
     cfgSync($up_cfg);
     cfgClose($up_cfg);
 }
