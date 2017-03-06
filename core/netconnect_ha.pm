@@ -44,6 +44,7 @@ sub getCFG {
     {
         my ($RC,@Probes) = $self->{remoterobot}->probesArray();
         foreach my $probe (@Probes) {
+            next if not defined $probe->{name};
             if($probe->{name} eq "net_connect") {
                 $self->{logger}->log(3,"Remote net_connect find! Get CFG...");
                 my $RC_CFG = $probe->getCfg($self->{storagePath},"netconnect_remote");
@@ -68,7 +69,23 @@ sub hydrateCFG {
     my $up_cfg      = cfgOpen("$self->{storagePath}/$up_file.cfg",0);
     my $down_cfg    = Nimbus::CFG->new("$self->{storagePath}/${down_file}.cfg");
 
+    # Create collision hash
+    my %AC_Profiles = ();
+    my %AC_Groups = ();
+
+    my $upProfilesArr = cfgSectionList($up_cfg,"/profiles");
+    foreach($upProfilesArr) {
+        $AC_Profiles{$_} = 1;
+    }
+
+    my $upGroupsArr = cfgKeyList($up_cfg,"/groups");
+    foreach($upGroupsArr) {
+        $AC_Groups{$_} = 1;
+    }
+
+    # Check profiles
     foreach my $profileName ( keys $down_cfg->{"profiles"} ) {
+        next if exists $AC_Profiles{$profileName};
         my $path = "/profiles/$profileName/";
         $self->createSection($up_cfg,$path);
         
@@ -76,6 +93,23 @@ sub hydrateCFG {
             my $keyValue = $down_cfg->{"profiles"}->{"$profileName"}->{"$sectionName"};
             cfgKeyWrite($up_cfg,$path,"$sectionName","$keyValue");
         }
+
+        # When services is defined ! 
+        if( defined $down_cfg->{"profiles"}->{"$profileName"}->{"services"} ) {
+            foreach my $serviceName ( keys $down_cfg->{"profiles"}->{"$profileName"}->{"services"} ) {
+                $self->createSection($up_cfg,"/profiles/$profileName/services/$serviceName/");
+
+                foreach my $serviceKey ( keys $down_cfg->{"profiles"}->{"$profileName"}->{"services"}->{"$serviceName"} ) {
+                    my $keyValue = $down_cfg->{"profiles"}->{"$profileName"}->{"services"}->{"$serviceName"}->{"$serviceKey"};
+                    cfgKeyWrite($up_cfg,"/profiles/$profileName/services/$serviceName/","$serviceKey","$keyValue");
+                }
+            }
+        }
+    }
+
+    foreach my $groupName ( keys $down_cfg->{"groups"} ) {
+        next if exists $AC_Groups{$groupName};
+        cfgKeyWrite($up_cfg,"/groups","$groupName","");
     }
 
     cfgSync($up_cfg);
