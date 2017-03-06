@@ -16,7 +16,11 @@ use core::netconnect_ha;
 my $probeName       = "netconnect_ha";
 my $probeVersion    = "1.0";
 my $time = time();
+
+# Declare variables
 my ($Logger,$UIM,$Execution_Date);
+my ($Domain,$OutputCache,$OutputDirectory,$Login,$Password,$Daemon_mode,$Netconnect_online,$SyncPath,$Nim_ADDR,$localMap,$LogDirectory,$Daemon_timeout);
+my $Main_executed = 0; 
 
 # Create log file
 $Logger = new perluim::logger({
@@ -25,17 +29,7 @@ $Logger = new perluim::logger({
 });
 $Logger->log(3,"$probeName started at $time!");
 
-# Read configuration file 
-my $CFG                 = Nimbus::CFG->new("$probeName.cfg");
-my $Domain              = $CFG->{"setup"}->{"domain"};
-my $OutputDirectory     = $CFG->{"setup"}->{"output_directory"} || "output";
-my $OutputCache         = $CFG->{"setup"}->{"output_cache_time"} || 345600;
-my $Login               = $CFG->{"setup"}->{"nim_login"};
-my $Password            = $CFG->{"setup"}->{"nim_password"};
-
-my $Netconnect_online   = $CFG->{"configuration"}->{"netconnect_online"} || "no";
-my $SyncPath            = $CFG->{"configuration"}->{"sync_path"} || "storage";
-my $Nim_ADDR            = $CFG->{"configuration"}->{"nim_addr"};
+readConfiguration();
 
 if(not defined $Nim_ADDR) {
     die("Please define configuration/nim_addr");
@@ -44,17 +38,30 @@ if(not defined $Nim_ADDR) {
 # Create framework
 nimLogin("$Login","$Password") if defined($Password) && defined($Password);
 $UIM            = new perluim::main("$Domain");
-$Execution_Date = perluim::utils::getDate();
-my $LogDirectory        = "$OutputDirectory/$Execution_Date";
-$Logger->log(3,"$LogDirectory");
+$Logger->cleanDirectory("$OutputDirectory",$OutputCache); 
 
-# Create and clean folders
-perluim::utils::createDirectory($LogDirectory);
-perluim::utils::createDirectory("$SyncPath");
-$Logger->cleanDirectory("$OutputDirectory",$OutputCache); # Clean directory older than 4 days.
+sub readConfiguration {
+    $Logger->log(3,"Read configuration...");
+    my $CFG              = Nimbus::CFG->new("$probeName.cfg");
+    $Domain              = $CFG->{"setup"}->{"domain"};
+    $OutputDirectory     = $CFG->{"setup"}->{"output_directory"} || "output";
+    $OutputCache         = $CFG->{"setup"}->{"output_cache_time"} || 345600;
+    $Login               = $CFG->{"setup"}->{"nim_login"};
+    $Password            = $CFG->{"setup"}->{"nim_password"};
 
-# Create local map (state).
-my $localMap = new perluim::filemap('storage/state.cfg');
+    $Daemon_mode         = $CFG->{"configuration"}->{"daemon_mode"} || "yes";
+    $Daemon_timeout      = $CFG->{"configuration"}->{"daemon_timeout"} || 120;
+    $Netconnect_online   = $CFG->{"configuration"}->{"netconnect_online"} || "no";
+    $SyncPath            = $CFG->{"configuration"}->{"sync_path"} || "storage";
+    $Nim_ADDR            = $CFG->{"configuration"}->{"nim_addr"};
+
+    $Execution_Date = perluim::utils::getDate();
+    $LogDirectory = "$OutputDirectory/$Execution_Date";
+    perluim::utils::createDirectory($LogDirectory);
+    perluim::utils::createDirectory("$SyncPath");
+
+    $localMap = new perluim::filemap("$SyncPath/state.cfg");
+}
 
 # Get remote robot!
 sub getRemote {
@@ -71,6 +78,7 @@ sub main {
 
     # Get local robot!
     my ($RC,$LocalRobot,$RemoteRobot);
+    $Main_executed = 1;
     ($RC,$LocalRobot) = $UIM->getLocalRobot(); 
     if($RC == NIME_OK) {
         $Logger->log(6,"Sucessfully get local robot!");
@@ -133,9 +141,61 @@ sub main {
 
     # Write local map to disk!
     $localMap->writeToDisk();
+    $Main_executed = 0;
 
 }
-main();
+
+if($Daemon_mode eq "yes") {
+
+    sub isHA {
+        my ($hMsg) = @_;
+        my $HA_Value = $localMap->has('HA');
+        $Logger->log(3,"isHA callback triggered with HA Value => $HA_Value");
+        my $PDS = pdsCreate();
+	    pdsPut_PCH ($PDS,"state","$HA_Value");
+        nimSendReply($hMsg,NIME_OK,$PDS);
+    }
+
+    sub execute {
+        my ($hMsg) = @_;
+        my $PDS = pdsCreate();
+
+        if($Main_executed) {
+            pdsPut_PCH ($PDS,"error","Main is already executed!");
+            nimSendReply($hMsg,NIME_ERROR,$PDS);
+        }
+        else {
+            main();
+            nimSendReply($hMsg,NIME_OK,$PDS);
+        }
+    }
+
+    sub timeout {
+        $Logger->log(5,"---------------------------------");
+        if($Main_executed == 0) {
+            main();
+            $|=1;
+            sleep($Daemon_timeout);
+        }
+    }
+
+    sub restart {
+        readConfiguration();
+    }
+
+    my $sess = Nimbus::Session->new("netconnect_ha");
+    $sess->setInfo("$probeVersion", "netconnect high availability");
+
+    if ($sess->server(NIMPORT_ANY,\&timeout,\&restart) == 0 ) {
+        $sess->addCallback("isHA");
+        $sess->addCallback("execute");
+        $sess->dispatch();
+    }
+
+}
+else {
+    main();
+}
 
 # Close script!
 $Logger->finalTime($time);
