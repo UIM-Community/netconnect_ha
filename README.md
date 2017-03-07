@@ -17,13 +17,3 @@ Find the documentation [Here](https://github.com/fraxken/netconnect_ha/wiki)
 This probe require [perluim 4.2](https://github.com/fraxken/perluim) or higher.
 
 > **Warning** Perluim 4.2 is under development. 
-
-# Roadmap v1.1 (LTS)
-
-- [x] Clone group.
-- [x] Clone profiles services.
-- [x] Avoid collision when we merge cfg between them.
-- [x] Create two distincts version ( timed probe & daemon probe ).
-- [x] First API documentation for netconnect_ha core class.
-
-> **Wait for perluim 4.2 release**
