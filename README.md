@@ -16,4 +16,7 @@ Find the documentation [Here](https://github.com/fraxken/netconnect_ha/wiki)
 
 This probe require [perluim 4.2](https://github.com/fraxken/perluim) or higher.
 
-> **Warning** Perluim 4.2 is under development. 
+# Roadmap next releases
+
+- Implementation restore_old callback (restore before ha configuration).
+- Update PerlUIM to v4.3
