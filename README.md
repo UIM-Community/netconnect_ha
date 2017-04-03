@@ -20,3 +20,4 @@ This probe require [perluim 4.2](https://github.com/fraxken/perluim) or higher.
 
 - Implementation restore_old callback (restore before ha configuration).
 - Update PerlUIM to v4.3
+- Implement cfgManager prototype in the core to simplify the whole code.
